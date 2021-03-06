@@ -1,26 +1,40 @@
 class FilmCollection
-  attr_reader :films
-  # создали все объекты класса фильм коллекции класса фильм
-  def self.from_dir(dir_path)
-    film_files = Dir[File.join(dir_path, '*.txt')]
-    films = film_files.map do |film|
-      film = File.readlines(film, chomp: true)
-      film = Film.new(film[0], film[1], film[2])
+  attr_reader :film_collection
+
+  class << self
+    def from_dir(dir_path)
+      film_files = Dir[File.join(dir_path, '*.txt')]
+      film_collection = film_files.map do |film|
+        film = File.readlines(film, chomp: true)
+        Film.new(film[0], film[1], film[2])
+      end
+
+      new(film_collection)
     end
 
-    new(films)
+    def from_wiki(url)
+      page = Nokogiri::HTML(URI.open(url) { |f| f.read })
+      film_collection =
+        page.css('.standard tbody tr:nth-last-child(-n+250)').map do |node|
+          title = node.css('td:nth-child(2)').text
+          producer = node.css('td:nth-child(4)').text
+          year = node.css('td:nth-child(3)').text
+          Film.new(title, producer, year)
+        end
+
+      new(film_collection)
+    end
   end
 
-  def initialize(films)
-    @films = films
-
+  def initialize(film_collection)
+    @film_collection = film_collection
   end
 
   def producers
-    @films.map(&:producer).uniq
+    @film_collection.map(&:producer).uniq
   end
 
   def film_by_producer(chosen_producer)
-    @films.select { |film| film.producer == chosen_producer }.sample
+    @film_collection.select { |film| film.producer == chosen_producer }.sample
   end
 end
